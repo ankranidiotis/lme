@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LME Lead Price</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f5f5f5;
+      color: #222;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+    h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
+    .subtitle { color: #666; font-size: 0.9rem; margin-bottom: 1.5rem; }
+    .chart-wrapper {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      padding: 1.5rem;
+      width: 100%;
+      max-width: 900px;
+    }
+    canvas { width: 100% !important; }
+    .meta {
+      margin-top: 1rem;
+      font-size: 0.8rem;
+      color: #999;
+      text-align: right;
+    }
+    .error {
+      color: #c00;
+      margin-top: 1rem;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>LME Lead Price</h1>
+  <p class="subtitle">USD / tonne</p>
+  <div class="chart-wrapper">
+    <canvas id="chart"></canvas>
+    <p class="meta" id="meta"></p>
+    <p class="error" id="error"></p>
+  </div>
+
+  <script>
+    async function init() {
+      let payload;
+      try {
+        const res = await fetch('./data.json');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        payload = await res.json();
+      } catch (err) {
+        document.getElementById('error').textContent = `Failed to load data: ${err.message}`;
+        return;
+      }
+
+      const { updated, data } = payload;
+
+      if (!data || data.length === 0) {
+        document.getElementById('error').textContent = 'No data available yet.';
+        return;
+      }
+
+      const labels = data.map(d => new Date(d.timestamp));
+      const values = data.map(d => d.lmelead);
+
+      new Chart(document.getElementById('chart'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'LME Lead (USD/t)',
+            data: values,
+            borderColor: '#2563eb',
+            backgroundColor: 'rgba(37,99,235,0.08)',
+            borderWidth: 2,
+            pointRadius: data.length > 90 ? 0 : 3,
+            pointHoverRadius: 5,
+            fill: true,
+            tension: 0.3,
+          }]
+        },
+        options: {
+          responsive: true,
+          interaction: { mode: 'index', intersect: false },
+          scales: {
+            x: {
+              type: 'time',
+              time: { unit: 'month', tooltipFormat: 'dd MMM yyyy' },
+              grid: { color: '#f0f0f0' },
+            },
+            y: {
+              title: { display: true, text: 'USD / tonne' },
+              grid: { color: '#f0f0f0' },
+            }
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: ctx => `$${ctx.parsed.y.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+              }
+            }
+          }
+        }
+      });
+
+      if (updated) {
+        const d = new Date(updated);
+        document.getElementById('meta').textContent =
+          `Last updated: ${d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
