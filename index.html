@@ -1,11 +1,13 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>LME Lead Price</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hammerjs@2/hammer.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2/dist/chartjs-plugin-zoom.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -82,6 +84,13 @@
     }
     canvas { width: 100% !important; }
 
+    .zoom-hint {
+      font-size: 0.75rem;
+      color: var(--text-faint);
+      text-align: right;
+      margin-top: 0.4rem;
+    }
+
     .stats-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -127,18 +136,19 @@
 <body>
   <div class="header">
     <h1>LME Lead Price</h1>
-    <button class="toggle-btn" id="themeToggle" onclick="toggleTheme()">Dark mode</button>
+    <button class="toggle-btn" id="themeToggle" onclick="toggleTheme()">Light mode</button>
   </div>
   <p class="subtitle">EUR / tonne &mdash; Cash contract, offer price</p>
   <div class="chart-wrapper">
     <canvas id="chart"></canvas>
+    <p class="zoom-hint">Scroll to zoom &middot; drag to pan &middot; double-click to reset</p>
     <div class="stats-grid" id="statsGrid"></div>
     <p class="meta" id="meta"></p>
     <p class="error" id="error"></p>
   </div>
 
   <footer>
-    Data sourced from <a href="https://www.lme.com" target="_blank" rel="noopener">lme.com</a> &mdash; Developed by 
+    Data sourced from <a href="https://www.lme.com" target="_blank" rel="noopener">lme.com</a> &mdash;
     <a href="https://nassoskranidiotis.com" target="_blank" rel="noopener">nassoskranidiotis.com</a>
   </footer>
 
@@ -147,7 +157,7 @@
       const html = document.documentElement;
       const isDark = html.getAttribute('data-theme') === 'dark';
       html.setAttribute('data-theme', isDark ? 'light' : 'dark');
-      document.getElementById('themeToggle').textContent = isDark ? 'Dark mode' : 'Light mode';
+      document.getElementById('themeToggle').textContent = isDark ? 'Light mode' : 'Dark mode';
       if (window._chart) updateChartTheme(window._chart);
     }
 
@@ -272,9 +282,24 @@
               callbacks: {
                 label: ctx => `${ctx.dataset.label}: €${ctx.parsed.y.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
               }
+            },
+            zoom: {
+              zoom: {
+                wheel: { enabled: true },
+                pinch: { enabled: true },
+                mode: 'x',
+              },
+              pan: {
+                enabled: true,
+                mode: 'x',
+              },
             }
           }
         }
+      });
+
+      document.getElementById('chart').addEventListener('dblclick', () => {
+        window._chart.resetZoom();
       });
 
       // Render monthly avg stat cards
